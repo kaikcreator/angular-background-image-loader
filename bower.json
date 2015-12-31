@@ -3,5 +3,9 @@
   "private": "true",
   "devDependencies": {
     "ionic": "driftyco/ionic-bower#1.2.1"
+  },
+  "dependencies": {
+    "downgularjs": "downgularJS#*",
+    "angular-local-storage": "~0.2.3"
   }
 }

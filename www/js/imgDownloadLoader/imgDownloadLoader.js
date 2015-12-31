@@ -1,1 +1,1 @@
-angular.module('imgDownloadLoaderModule', ['downgularJS'])
+angular.module('imgDownloadLoaderModule', ['downgularJS', 'LocalStorageModule'])

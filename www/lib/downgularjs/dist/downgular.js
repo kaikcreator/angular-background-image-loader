@@ -388,7 +388,7 @@ angular.module('downgularJS')
 
 
 
-    this.$get = ['$rootScope', '$q', function($rootScope, $q) {
+    this.$get = ['$rootScope', '$q', '$window', function($rootScope, $q, $window) {
 
 
         /**
@@ -445,21 +445,21 @@ angular.module('downgularJS')
                     deferred.reject(error);
                 };
                 try{
-                    if(window.cordova){
+                    if($window.cordova){
                         console.log("init persistent file system in device");
                         //if it's an app is running in the device, do normal setup
-                        window.requestFileSystem(storageType, storageQuota, fileSystemSuccess, fileSystemFail);
+                        $window.requestFileSystem(storageType, storageQuota, fileSystemSuccess, fileSystemFail);
                     }
                     else{
                         //if the app is running in browser, request storage quota and init for chrome (is the only one that provides FileSystem API)
                         console.log("init persistent file system in navigator");
-                        window.resolveLocalFileSystemURI = window.resolveLocalFileSystemURL || window.webkitResolveLocalFileSystemURL;
-                        window.requestFileSystem  = window.webkitRequestFileSystem;  
-                        if(storageType === window.TEMPORARY)
-                            window.requestFileSystem(storageType, storageQuota, fileSystemSuccess, fileSystemFail);
+                        $window.resolveLocalFileSystemURI = $window.resolveLocalFileSystemURL || $window.webkitResolveLocalFileSystemURL;
+                        $window.requestFileSystem  = $window.webkitRequestFileSystem;  
+                        if(storageType === $window.TEMPORARY)
+                            $window.requestFileSystem(storageType, storageQuota, fileSystemSuccess, fileSystemFail);
                         else{
                             navigator.webkitPersistentStorage.requestQuota(storageQuota, function(grantedBytes) {
-                                window.requestFileSystem(storageType, grantedBytes, fileSystemSuccess, fail);
+                                $window.requestFileSystem(storageType, grantedBytes, fileSystemSuccess, fail);
                             }, function(e) {
                                 console.log('Error', e);
                             });
@@ -487,7 +487,7 @@ angular.module('downgularJS')
                 };
 
                 try{
-                    window.resolveLocalFileSystemURI(fileURI, function(fileEntry){
+                    $window.resolveLocalFileSystemURI(fileURI, function(fileEntry){
                         var successRemoving = function(){};
                         if(onSuccess){ 
                             successRemoving = onSuccess; 
@@ -583,7 +583,7 @@ angular.module('downgularJS')
                 };
 
                 try{
-                    window.resolveLocalFileSystemURI(
+                    $window.resolveLocalFileSystemURI(
                         fileURI,  
                         function(fileEntry){
 

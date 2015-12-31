@@ -16,7 +16,7 @@ angular.module('imgDownloadLoaderModule')
   })
 
 
-.directive('imgLoader', ['imgLoaderConfig', '$parse', function(imgLoaderConfig, $parse) {
+.directive('imgLoader', ['imgLoaderConfig', '$parse', 'imgDownloadCache', function(imgLoaderConfig, $parse, imgDownloadCache) {
 	return {
         restrict: "EA",
         scope:{},
@@ -50,7 +50,12 @@ angular.module('imgDownloadLoaderModule')
             img.onerror = function(e) {
                 console.log("error loading contact.photo, lets load default img");
             };			
-            img.src = $parse(attrs.src)(scope.$parent);
+
+            //image is downloaded to a file through a service, that register downloads in cache
+            var src = $parse(attrs.src)(scope.$parent);
+            imgDownloadCache.get(src).then(function(uri){
+                img.src = uri;
+            });
 		}
 	}
 }])

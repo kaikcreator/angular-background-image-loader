@@ -21,4 +21,4 @@ angular.module('imgDownloader', ['ionic', 'imgDownloadLoaderModule'])
       StatusBar.styleDefault();
     }
   });
-})
+});

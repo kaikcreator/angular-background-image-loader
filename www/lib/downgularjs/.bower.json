@@ -28,11 +28,11 @@
     "package.json",
     "src"
   ],
-  "_release": "eeee8cc4c6",
+  "_release": "f76a9b632e",
   "_resolution": {
     "type": "branch",
     "branch": "master",
-    "commit": "eeee8cc4c6042148d082ba81e5219fe2b9c8ee99"
+    "commit": "f76a9b632e736dfb6386469f6e457acb7092adba"
   },
   "_source": "git://github.com/kaikcreator/downgularJS.git",
   "_target": "*",

@@ -8,11 +8,11 @@ angular.module('imgDownloader')
 
 })
 
-.controller('ViewController', function($scope, $sce){
+.controller('ViewController', function($scope, $sce, $window){
     
 
-    $scope.imageURLs = [
-        "http://shit.jpg",
+    var images = [
+        "http://false.jpg",
         "http://www.hdwallpapers.in/walls/sleepy_kitten-wide.jpg",
         "http://kpbs.media.clients.ellingtoncms.com/img/news/tease/2014/08/20/Cute_grey_kitten.jpg",
         "http://upload.wikimedia.org/wikipedia/commons/a/a5/Red_Kitten_01.jpg",
@@ -43,16 +43,23 @@ angular.module('imgDownloader')
 //        $sce.trustAsResourceUrl($scope.imageURLs[i]);
 //    }
     
-    $scope.imageURLsWithCORS = [];
-    for(var i=0; i< $scope.imageURLs.length; i++){
-        http://localhost:1337
-        var pos = 7;
-        if($scope.imageURLs[i].indexOf('https://') == 0)
-            pos++;
-        
-        var result = [$scope.imageURLs[i].slice(0,pos), 'localhost:1337/', $scope.imageURLs[i].slice(pos)].join('');
-        
-        $scope.imageURLsWithCORS.push(result);
+    $scope.imageURLs = [];
+    
+    //include corsproxy in urls
+    if(!$window.cordova){
+        for(var i=0; i< images.length; i++){
+            var pos = 7;
+            if(images[i].indexOf('https://') === 0){
+                pos++;
+            }
+
+            var result = [images[i].slice(0,pos), 'localhost:1337/', images[i].slice(pos)].join('');
+
+            $scope.imageURLs.push(result);
+        }
+    }
+    else{
+        $scope.imageURLs = images;
     }
         
-})
+});
