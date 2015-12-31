@@ -1,0 +1,9 @@
+/* Empty. Add your own CSS if you like */
+
+img-loader{
+    background-size: cover;
+    width: 100%;
+    height: 200px;
+    border: solid 1px darkgrey;
+    margin-bottom: -1px;
+}
