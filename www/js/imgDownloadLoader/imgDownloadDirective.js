@@ -48,7 +48,7 @@ angular.module('imgDownloadLoaderModule')
 		        });
 			}
             img.onerror = function(e) {
-                console.log("error loading contact.photo, lets load default img");
+                console.log("error loading img from " + this.src + " lets load default img");
             };			
 
             //image is downloaded to a file through a service, that register downloads in cache

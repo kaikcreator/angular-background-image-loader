@@ -1,10 +1,12 @@
 angular.module('imgDownloader')
 
 
-.config(function($compileProvider, imgLoaderConfigProvider){
+.config(function($compileProvider, imgLoaderConfigProvider, downgularFileToolsProvider){
     
     $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|blob|filesystem):|data:image\//);
     imgLoaderConfigProvider.setFallbackImage('img/gradient.gif');
+    if(!window.cordova)
+        downgularFileToolsProvider.usePersistentMemory(false);
 
 })
 
