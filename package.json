@@ -10,12 +10,17 @@
     "gulp-rename": "^1.2.0"
   },
   "devDependencies": {
+    "angular-resource": "^1.4.8",
     "bower": "^1.3.3",
     "gulp": "^3.9.0",
     "gulp-jshint": "^2.0.0",
     "gulp-util": "^2.2.14",
+    "jasmine-core": "^2.4.1",
     "jshint": "^2.8.0",
     "jshint-stylish": "^2.1.0",
+    "karma": "^0.13.17",
+    "karma-chrome-launcher": "^0.2.2",
+    "karma-jasmine": "^0.3.6",
     "shelljs": "^0.3.0"
   },
   "cordovaPlugins": [
