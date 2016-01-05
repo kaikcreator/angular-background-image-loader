@@ -19,6 +19,7 @@ module.exports = function(config) {
       'www/lib/downgularjs/dist/downgular.js',
       'www/js/imgDownloadLoader/imgDownloadLoader.js',
       'www/js/imgDownloadLoader/imgDownloadCache.js',
+      'tests/helpers/HttpImgToBlobInterceptorModule.js',
       'tests/unit-tests/**/*.js',
       {pattern: 'tests/fixtures/*.jpg', watched: false, included: false, served: true}
     ],
@@ -69,6 +70,9 @@ module.exports = function(config) {
 
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits
-    singleRun: false
+    singleRun: false,
+      
+    defaultTimeoutInterval: 30000 //30s
+      
   })
 }

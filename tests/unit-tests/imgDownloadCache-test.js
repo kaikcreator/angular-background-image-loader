@@ -5,34 +5,46 @@ describe('ImgDownloadCache tests', function () {
     var $httpBackend, imgDownloadCache;
     
     var images = [];
-    images[0]  = {
-        'url': "/fixtures/image1.jpg"
-    };
     
-    images[1] = {
-        'url': "/fixtures/image2.jpg"
-    }
     
-    //Get images as http requests
-    images.forEach(function(image){
+    beforeAll(function(done, _$httpBackend_){
+        $httpBackend = _$httpBackend_;
+        
+        images[0]  = {
+            'url': "/fixtures/image1.jpg"
+        };
+
+
+        //Get images as http requests
         var request = new XMLHttpRequest();
-        request.open('GET', image.url, false);
-        request.send(null);
-        image.request = {status: request.status, response: request.response};
+
+        var successCallback = function(){
+            images[0].request = {
+                status: request.status, 
+                response: request.response
+            };
+            done();
+        }
+        request.responseType = 'blob',
+        request.open('GET', images[0].url, true);
+        request.addEventListener("load", successCallback);
+
+        request.send(null);      
+        
     });
 
     
     beforeEach(function(){
-//        module("ngResource");
-//        module("LocalStorageModule");
-//        module("downgularJS");
         module("imgDownloadLoaderModule");
+        module("HttpImgToBlobInterceptorModule");
     });
     
 
 
-    beforeEach(inject(function (_$httpBackend_) {
+    beforeEach(inject(function (_$httpBackend_, httpToBlobInterceptor) {
         $httpBackend = _$httpBackend_;
+        
+        httpToBlobInterceptor.setBlobForUrl(images[0].request.response, images[0].url);
         
         //set httpBackend for each image
         images.forEach(function(image){            
@@ -40,7 +52,8 @@ describe('ImgDownloadCache tests', function () {
             .when('GET', image.url)
             .respond(
             function(method, url, data, headers){
-                return [image.request.status, image.request.response, {}];
+                return [image.request.status, image.request.response, {'Response-Type':'image/jpeg'}];
+                //return [image.request.status, image.request.blob, {'Content-Type':'blob'}];
             });             
         });
         
@@ -48,14 +61,15 @@ describe('ImgDownloadCache tests', function () {
     }));
     
     
-    beforeEach(inject(function (_$http_) {
+    beforeEach(inject(function (_$http_, _imgDownloadCache_) {
         $http = _$http_;
+        imgDownloadCache = _imgDownloadCache_;
     }));    
     
 
     
 
-    // Test 0: Check that user is empty at the beginning
+    // Test 0: This test is just to make sure that images are served fine
     it("Get local image 1", function(done) {  
         
         
@@ -66,11 +80,10 @@ describe('ImgDownloadCache tests', function () {
         .success(function(file){
             done();
             expect(file).not.toBeNull();
-            expect(file.length).toEqual(images[0].request.response.length);
+            expect(file).toEqual(images[0].request.response);
             }
         )
         .error(function(err){
-            console.log(err);
             fail("error callback called");
         });
         
@@ -78,57 +91,21 @@ describe('ImgDownloadCache tests', function () {
         
     });
     
+
     
-    // Test 1: Check that user is empty at the beginning
-    it("Get local image 2", function(done) {  
-        
-        
-        $http.get(images[1].url, {
-            method: 'GET',
-            responseType: 'blob', //this way, the object I receive will be a binary blob, that can be directly stored in the file system
-        })
-        .success(function(file){
-            done();
-            expect(file).not.toBeNull();
-            expect(file.length).toEqual(images[1].request.response.length);
-            }
-        )
-        .error(function(err){
-            console.log(err);
-            fail("error callback called");
-        });
-        
+    
+    // Test 1: Get image using imageDownloadLoader
+    it("Download image for first time using imageDownloadLoder", function(done) {
+
+        imgDownloadCache.get(images[0].url).then(function(uri){
+                console.log(uri);
+                expect(uri).toBeDefined();
+                done();
+            });
+         
         $httpBackend.flush();
         
-    });
-    
-    
-    
-    
-//    // Test 2: Create object from login, also in persistence layer
-//    it("Creates persistent user from login (test CRUD)", function(done) {
-//        console.log("Test UserService - Create persistent user from login");
-//        UserService.login(user1Fixture.email, 'password')
-//        .then(function(){
-//            var user = UserService.getUser();
-//            expect(user).toBeDefined();
-//
-//            
-//            //test is done
-//            done();
-//            
-//            //test delete user
-//            UserService.logout();
-//            var user = UserService.getUser();
-//            expect(user).toBe(null);
-//            
-//        }); 
-//        
-//        $httpBackend.flush();
-//        
-//
-//        
-//    }); 
+    }); 
      
 
 });
