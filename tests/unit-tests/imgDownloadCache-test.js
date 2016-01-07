@@ -212,10 +212,10 @@ describe('ImgDownloadCache tests', function () {
     // Test3: Check and clear imgDownloadCache
     it("check cache and clear it", function(done) {
         //check that both downloads are already registered in localstorage
-        var item0 = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[0].url);
-        expect(item0).not.toBeNull();
-        var item1 = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[1].url);
-        expect(item1).not.toBeNull();        
+        var item0Uri = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[0].url);
+        expect(item0Uri).not.toBeNull();
+        var item1Uri = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[1].url);
+        expect(item1Uri).not.toBeNull();        
         //check also that currentKeys object is in local storage
         var keys = localStorage.getItem("ls." +  imgDownloadStorage.prefix + imgDownloadStorage.keys);
         expect(keys).not.toBeNull();        
@@ -232,8 +232,26 @@ describe('ImgDownloadCache tests', function () {
             function(){
                 //make sure that cache has been cleared
                 var item = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[0].url);
-                expect(item).toBeNull();       
-                done();
+                expect(item).toBeNull();    
+                
+                //test that file related with img0 do not exist
+                downgularFileTools.getFileFromSystemGivenURI(angular.fromJson(item0Uri), 
+                    function(file){
+                        fail("file should have been already removed");
+                    }, 
+                    function(error){
+                        //test that file related with img1 do not exist
+                        downgularFileTools.getFileFromSystemGivenURI(angular.fromJson(item1Uri), 
+                            function(file){
+                                fail("file should have been already removed");
+                            }, 
+                            function(error){
+                                //SUCCESS
+                                done();
+                            }
+                        );
+                    }
+                );
             });
     
         //force promises to get executed
