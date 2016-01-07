@@ -108,8 +108,17 @@ describe('ImgDownloadCache tests', function () {
             //check that download has been registered in localstorage
             var item = localStorage.getItem("ls." + imgDownloadStoragePrefix + images[0].url);
             expect(item).not.toBeNull();
-            done();
-            });
+            //retrieve file from system uri, and check that size matches the downloaded image
+            downgularFileTools.getFileFromSystemGivenURI(uri, 
+                function(file){
+                    expect(file.size).toEqual(images[0].request.response.size);
+                    done();
+                }, 
+                function(error){
+                    fail("failed retrieving file from system uri " + error);
+                }
+            );
+        });
          
         //flush http backend
         $httpBackend.flush();
@@ -128,9 +137,21 @@ describe('ImgDownloadCache tests', function () {
         
         //get image (should retrieve it from local storage)
         imgDownloadCache.get(images[0].url).then(function(uri){
-                expect(uri).toBeDefined();
-                done();
-            });
+            expect(uri).toBeDefined();
+            //check that download has been registered in localstorage
+            var item = localStorage.getItem("ls." + imgDownloadStoragePrefix + images[0].url);
+            expect(item).not.toBeNull();
+            //retrieve file from system uri, and check that size matches the downloaded image
+            downgularFileTools.getFileFromSystemGivenURI(uri, 
+                function(file){
+                    expect(file.size).toEqual(images[0].request.response.size);
+                    done();
+                }, 
+                function(error){
+                    fail("failed retrieving file from system uri " + error);
+                }
+            );
+        });
         
         //Make sure that no $http petition has been made to our image
         expect($httpBackend.flush).toThrowError('No pending request to flush !');
@@ -141,7 +162,7 @@ describe('ImgDownloadCache tests', function () {
     });
     
     
-    // Clear imgDownloadCache
+    // Test3: Clear imgDownloadCache
     it("clear cache", function() {
 
         //use clear cache method
