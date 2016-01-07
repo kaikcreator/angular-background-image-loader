@@ -4,7 +4,11 @@ angular.module('imgDownloader')
 .config(function($compileProvider, imgLoaderConfigProvider, downgularFileToolsProvider){
     
     $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|file|blob|filesystem):|data:image\//);
+    
     imgLoaderConfigProvider.setFallbackImage('img/gradient.gif');
+    imgLoaderConfigProvider.setClearOldCache(true);
+    imgLoaderConfigProvider.setPeriodToKeepAliveInMs(60*60*1000);//1 hour
+    
     if(!window.cordova)
         downgularFileToolsProvider.usePersistentMemory(false);
 

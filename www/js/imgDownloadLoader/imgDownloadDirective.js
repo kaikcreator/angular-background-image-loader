@@ -1,21 +1,6 @@
 angular.module('imgDownloadLoaderModule')
 
 
-  .provider('imgLoaderConfig', function () {
-
-    this.fallbackImage = null;
-    
-    this.setFallbackImage = function (src) {
-      this.fallbackImage = src;
-    };
-
-    this.$get = function () {
-      return this;
-    };
-
-  })
-
-
 .directive('imgLoader', ['imgLoaderConfig', '$parse', 'imgDownloadCache', function(imgLoaderConfig, $parse, imgDownloadCache) {
 	return {
         restrict: "EA",

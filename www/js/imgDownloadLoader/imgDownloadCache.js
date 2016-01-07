@@ -20,7 +20,7 @@ angular.module('imgDownloadLoaderModule')
 })
 
 
-.factory('imgDownloadCache', ['$q', '$window', '$rootScope', 'downgularFileTools', 'localStorageService', 'downgularQueue', 'imgDownloadStorage', function($q, $window, $rootScope, downgularFileTools, localStorageService, downgularQueue, imgDownloadStorage){
+.factory('imgDownloadCache', ['$q', '$window', '$rootScope', 'imgLoaderConfig', 'downgularFileTools', 'localStorageService', 'downgularQueue', 'imgDownloadStorage', function($q, $window, $rootScope, imgLoaderConfig, downgularFileTools, localStorageService, downgularQueue, imgDownloadStorage){
     
     var Service = {};
     
@@ -212,7 +212,7 @@ angular.module('imgDownloadLoaderModule')
         
         return deferred.promise;
     }
-    
+        
     
     //public method to resume downloads
     Service.resumeDownloads = function(){
@@ -224,8 +224,37 @@ angular.module('imgDownloadLoaderModule')
     Service.pauseDownloads = function(){
         imgQueue.stopDownloading();
     };   
+    
+    
+    //public method to clear old cache
+    Service.clearOldCache = function(){
+        //perform cache clearance if need
+        var time = Date.now();
+        //bucle over currentKeys in order to delete the ones that have expired
+        var currentKeys = localStorageService.get(imgDownloadStorage.prefix + imgDownloadStorage.keys);
+        if(currentKeys != null){
+            for(var key in currentKeys){
+                if(currentKeys.hasOwnProperty(key)){
+                    var timestamp = currentKeys[key].timestamp;
+                    if(time-timestamp > imgLoaderConfig.periodToKeepAliveInMs){
+                        removeWithFileFromLocalStorage(key, true);
+                    }
+                }
+            }
+        }
+    };
+
+    
+    //TODO: improve clearOldCache to return a promise, and emit a signal when it's cleared
+    //perform cache clearance if need
+    if(imgLoaderConfig.clearOldCacheOnLoad === true){
+        Service.clearOldCache();
+    }
      
     
     return Service;
     
 }]);
+
+
+
