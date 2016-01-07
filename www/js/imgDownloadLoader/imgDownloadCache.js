@@ -1,15 +1,20 @@
 angular.module('imgDownloadLoaderModule')
 
 .config(function(downgularFileToolsProvider){
-    downgularFileToolsProvider.usePersistentMemory(true);
-    if(!window.cordova)
+    
+    if(!window.cordova){
+        downgularFileToolsProvider.usePersistentMemory(false);
         downgularFileToolsProvider.setStorageQuota(50*1024*1024);
+    }
     else{
+        downgularFileToolsProvider.usePersistentMemory(true);
         downgularFileToolsProvider.setStorageQuota(0);
     }
 })
 
-.factory('imgDownloadCache', ['$q', '$window', '$rootScope', 'downgularFileTools', 'localStorageService', 'downgularQueue', function($q, $window, $rootScope, downgularFileTools, localStorageService, downgularQueue){
+.constant('imgDownloadStoragePrefix', 'imgDownload')
+
+.factory('imgDownloadCache', ['$q', '$window', '$rootScope', 'downgularFileTools', 'localStorageService', 'downgularQueue', 'imgDownloadStoragePrefix', function($q, $window, $rootScope, downgularFileTools, localStorageService, downgularQueue, imgDownloadStoragePrefix){
     
     var Service = {};
     
@@ -25,7 +30,7 @@ angular.module('imgDownloadLoaderModule')
     
     //private method to call when each image is downloaded
     var downloadCallback = function(data){
-        localStorageService.set(data.url, data.fileUrl);
+        localStorageService.set(imgDownloadStoragePrefix + data.url, data.fileUrl);
         notifyURLdownload(data.url);
     }
     
@@ -55,7 +60,7 @@ angular.module('imgDownloadLoaderModule')
             if(subscriptionCancel !== null)
                 subscriptionCancel();
             //retrieve file URL from localstorage (as it's been updated after img download)
-            fileUri = localStorageService.get(url);
+            fileUri = localStorageService.get(imgDownloadStoragePrefix + url);
             $window.resolveLocalFileSystemURI(fileUri, resolveWithFileUrl, fileNotFound);
         }
         
@@ -93,7 +98,7 @@ angular.module('imgDownloadLoaderModule')
         }
         else{
             //if image URL is a link, check if it is already cached
-            var fileUri = localStorageService.get(url);
+            var fileUri = localStorageService.get(imgDownloadStoragePrefix + url);
             if(fileUri !== null && fileUri !== ""){
                 //check if file exists, and in that case, resolve promise with it
                 $window.resolveLocalFileSystemURI(fileUri, resolveWithFileUrl, fileNotFound);
@@ -108,6 +113,11 @@ angular.module('imgDownloadLoaderModule')
         //return promise
         return deferred.promise;
     };
+    
+    Service.clearCache = function(){
+        var regex = new RegExp(imgDownloadStoragePrefix);
+        localStorageService.clearAll(regex);
+    }
     
     
     //public method to resume downloads
