@@ -12,9 +12,12 @@ angular.module('imgDownloadLoaderModule')
     }
 })
 
-.constant('imgDownloadStoragePrefix', 'imgDownload')
+.constant('imgDownloadStorage', {
+    prefix:'imgDownload',
+    keys: 'keys'
+})
 
-.factory('imgDownloadCache', ['$q', '$window', '$rootScope', 'downgularFileTools', 'localStorageService', 'downgularQueue', 'imgDownloadStoragePrefix', function($q, $window, $rootScope, downgularFileTools, localStorageService, downgularQueue, imgDownloadStoragePrefix){
+.factory('imgDownloadCache', ['$q', '$window', '$rootScope', 'downgularFileTools', 'localStorageService', 'downgularQueue', 'imgDownloadStorage', function($q, $window, $rootScope, downgularFileTools, localStorageService, downgularQueue, imgDownloadStorage){
     
     var Service = {};
     
@@ -24,15 +27,33 @@ angular.module('imgDownloadLoaderModule')
            callback();
         });
     };
-    var notifyURLdownload=  function(url){
+    var notifyURLdownload =  function(url){
     	$rootScope.$emit(url);
     };
     
+    //private method to store a url in localstorage
+    var saveToLocalStorage = function(url, fileUrl){
+        //save relation url - fileUrl
+        localStorageService.set(imgDownloadStorage.prefix + url, fileUrl);
+        //save url in currentKeys item, to be able to retrieve it for cache clearance
+        var currentKeys = localStorageService.get(imgDownloadStorage.prefix + imgDownloadStorage.keys);
+        if(currentKeys === null){
+            currentKeys = {};
+        }
+        currentKeys[url] = {timestamp: Date.now()};
+        localStorageService.set(imgDownloadStorage.prefix + imgDownloadStorage.keys, currentKeys);
+    }
+    
+    //private method to get fileUri from url in local storage
+    var getFromLocalStorage = function(url){
+        return localStorageService.get(imgDownloadStorage.prefix + url);
+    }
+    
     //private method to call when each image is downloaded
     var downloadCallback = function(data){
-        localStorageService.set(imgDownloadStoragePrefix + data.url, data.fileUrl);
+        saveToLocalStorage(data.url, data.fileUrl);
         notifyURLdownload(data.url);
-    }
+    };
     
     //private method to create a download queue
     var imgQueue = downgularQueue.build('imgDownloadQueue', '.img', downloadCallback);
@@ -60,7 +81,7 @@ angular.module('imgDownloadLoaderModule')
             if(subscriptionCancel !== null)
                 subscriptionCancel();
             //retrieve file URL from localstorage (as it's been updated after img download)
-            fileUri = localStorageService.get(imgDownloadStoragePrefix + url);
+            fileUri = getFromLocalStorage(url);
             $window.resolveLocalFileSystemURI(fileUri, resolveWithFileUrl, fileNotFound);
         }
         
@@ -98,7 +119,7 @@ angular.module('imgDownloadLoaderModule')
         }
         else{
             //if image URL is a link, check if it is already cached
-            var fileUri = localStorageService.get(imgDownloadStoragePrefix + url);
+            var fileUri = getFromLocalStorage(url);
             if(fileUri !== null && fileUri !== ""){
                 //check if file exists, and in that case, resolve promise with it
                 $window.resolveLocalFileSystemURI(fileUri, resolveWithFileUrl, fileNotFound);
@@ -115,7 +136,7 @@ angular.module('imgDownloadLoaderModule')
     };
     
     Service.clearCache = function(){
-        var regex = new RegExp(imgDownloadStoragePrefix);
+        var regex = new RegExp(imgDownloadStorage.prefix);
         localStorageService.clearAll(regex);
     }
     

@@ -4,7 +4,7 @@ describe('ImgDownloadCache tests', function () {
     var $http;
     var $httpBackend, imgDownloadCache;
     var downgularFileTools;
-    var imgDownloadStoragePrefix;
+    var imgDownloadStorage;
     var $rootScope;
     
     var images = [];
@@ -43,12 +43,12 @@ describe('ImgDownloadCache tests', function () {
         
     
     //inject services we are going to use
-    beforeEach(inject(function(_downgularFileTools_, _$rootScope_, _$http_, _imgDownloadCache_, _imgDownloadStoragePrefix_){
+    beforeEach(inject(function(_downgularFileTools_, _$rootScope_, _$http_, _imgDownloadCache_, _imgDownloadStorage_){
         downgularFileTools = _downgularFileTools_;
         $rootScope = _$rootScope_;
         $http = _$http_;
         imgDownloadCache = _imgDownloadCache_;        
-        imgDownloadStoragePrefix = _imgDownloadStoragePrefix_;
+        imgDownloadStorage = _imgDownloadStorage_;
     }));
     
 
@@ -98,7 +98,7 @@ describe('ImgDownloadCache tests', function () {
         //delete any imgDownloadCache
         imgDownloadCache.clearCache();
         //check that image do not exist
-        var item = localStorage.getItem("ls." + imgDownloadStoragePrefix + images[0].url);
+        var item = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[0].url);
         expect(item).toBeNull();
         
         //get image (should force image download)
@@ -106,7 +106,7 @@ describe('ImgDownloadCache tests', function () {
             //expect to have uri to a file
             expect(uri).toBeDefined();
             //check that download has been registered in localstorage
-            var item = localStorage.getItem("ls." + imgDownloadStoragePrefix + images[0].url);
+            var item = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[0].url);
             expect(item).not.toBeNull();
             //retrieve file from system uri, and check that size matches the downloaded image
             downgularFileTools.getFileFromSystemGivenURI(uri, 
@@ -132,14 +132,14 @@ describe('ImgDownloadCache tests', function () {
     // Test 2: Get image using imageDownloadLoader
     it("get image for second time, it should be cached", function(done) {
         //check that download is already registered in localstorage
-        var item = localStorage.getItem("ls." + imgDownloadStoragePrefix + images[0].url);
+        var item = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[0].url);
         expect(item).not.toBeNull();
         
         //get image (should retrieve it from local storage)
         imgDownloadCache.get(images[0].url).then(function(uri){
             expect(uri).toBeDefined();
             //check that download has been registered in localstorage
-            var item = localStorage.getItem("ls." + imgDownloadStoragePrefix + images[0].url);
+            var item = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[0].url);
             expect(item).not.toBeNull();
             //retrieve file from system uri, and check that size matches the downloaded image
             downgularFileTools.getFileFromSystemGivenURI(uri, 
@@ -169,7 +169,7 @@ describe('ImgDownloadCache tests', function () {
         imgDownloadCache.clearCache();
         
         //make sure that cache has been cleared
-        var item = localStorage.getItem("ls." + imgDownloadStoragePrefix + images[0].url);
+        var item = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[0].url);
         expect(item).toBeNull();        
         
         //force promises to get executed
