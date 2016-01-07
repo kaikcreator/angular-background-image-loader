@@ -1,5 +1,6 @@
 angular.module('imgDownloadLoaderModule')
 
+
 .config(function(downgularFileToolsProvider){
     
     if(!window.cordova){
@@ -12,14 +13,17 @@ angular.module('imgDownloadLoaderModule')
     }
 })
 
+
 .constant('imgDownloadStorage', {
     prefix:'imgDownload',
     keys: 'keys'
 })
 
+
 .factory('imgDownloadCache', ['$q', '$window', '$rootScope', 'downgularFileTools', 'localStorageService', 'downgularQueue', 'imgDownloadStorage', function($q, $window, $rootScope, downgularFileTools, localStorageService, downgularQueue, imgDownloadStorage){
     
     var Service = {};
+    
     
     //private pub-sub methods, to notify downloads
     var onURLdownload = function(url, callback) {
@@ -30,6 +34,7 @@ angular.module('imgDownloadLoaderModule')
     var notifyURLdownload =  function(url){
     	$rootScope.$emit(url);
     };
+    
     
     //private method to store a url in localstorage
     var saveToLocalStorage = function(url, fileUrl){
@@ -44,16 +49,51 @@ angular.module('imgDownloadLoaderModule')
         localStorageService.set(imgDownloadStorage.prefix + imgDownloadStorage.keys, currentKeys);
     }
     
+    
     //private method to get fileUri from url in local storage
     var getFromLocalStorage = function(url){
         return localStorageService.get(imgDownloadStorage.prefix + url);
     }
+    
+    
+    //private method to remove file from system and its url from localstorage. Optionally updates also currentkeys
+    var removeWithFileFromLocalStorage = function(url, updateCurrentKeys){
+        var deferred = $q.defer();
+        //internal method to remove url from localstorage
+        var removeFromLocalStorage = function(){
+            localStorageService.remove(imgDownloadStorage.prefix + url);
+            if(updateCurrentKeys){
+                var currentKeys = localStorageService.get(imgDownloadStorage.prefix + imgDownloadStorage.keys);
+                if(currentKeys != null){
+                    delete currentKeys[url];
+                    localStorageService.set(imgDownloadStorage.prefix + imgDownloadStorage.keys, currentKeys);
+                }
+            }
+        };
+        //delete file, and delete urls on success and error callbacks
+        downgularFileTools.deleteFileFromSystemGivenURI(
+            getFromLocalStorage(url),
+            function(successData){
+                removeFromLocalStorage();
+                deferred.resolve();
+            },
+            function(error){
+                console.log("Error removing file" + angular.toJson(error));
+                removeFromLocalStorage();
+                deferred.reject();
+            }
+        );
+        
+        return deferred.promise;
+    };
+    
     
     //private method to call when each image is downloaded
     var downloadCallback = function(data){
         saveToLocalStorage(data.url, data.fileUrl);
         notifyURLdownload(data.url);
     };
+    
     
     //private method to create a download queue
     var imgQueue = downgularQueue.build('imgDownloadQueue', '.img', downloadCallback);
@@ -135,9 +175,42 @@ angular.module('imgDownloadLoaderModule')
         return deferred.promise;
     };
     
+    
+    //public static method to clear imgDownload cache
     Service.clearCache = function(){
-        var regex = new RegExp(imgDownloadStorage.prefix);
-        localStorageService.clearAll(regex);
+        var deferred = $q.defer();
+        var remainingKeys;
+        var errorDetected = false;
+        var resolver = function(success){
+            remainingKeys--;
+            if(remainingKeys == 0){
+                if(!errorDetected){
+                    deferred.resolve();
+                }
+                else{
+                    deferred.reject();
+                }
+            }
+        };
+        //bucle over currentKeys in order to delete its files
+        var currentKeys = localStorageService.get(imgDownloadStorage.prefix + imgDownloadStorage.keys);
+        if(currentKeys != null){
+            remainingKeys = Object.keys(currentKeys).length;
+            for(var key in currentKeys){
+                if(currentKeys.hasOwnProperty(key)){
+                    //we do not update currentKeys, because we'll clear anyway keys from LS
+                    removeWithFileFromLocalStorage(key, false)
+                    .then(
+                        function(success){resolver(true);},
+                        function(error){resolver(false);}
+                    );
+                }
+            }
+        }
+        //delete currentKeys from localstorage
+        localStorageService.remove(imgDownloadStorage.prefix + imgDownloadStorage.keys);
+        
+        return deferred.promise;
     }
     
     

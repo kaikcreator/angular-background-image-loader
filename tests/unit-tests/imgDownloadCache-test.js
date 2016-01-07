@@ -17,21 +17,33 @@ describe('ImgDownloadCache tests', function () {
         images[0]  = {
             'url': "/fixtures/image1.jpg"
         };
+        images[1]  = {
+            'url': "/fixtures/image2.jpg"
+        };        
 
         //Get images as http requests
-        var request = new XMLHttpRequest();
-
-        var successCallback = function(){
-            images[0].request = {
-                status: request.status, 
-                response: request.response
-            };
-            done();
+        var counter = 0;
+        for(var i= 0; i< images.length; i++){
+            //using IIFE in order to prevent variable i corruption in callbacks
+            (function(index){
+                var request = new XMLHttpRequest();
+                var successCallback = function(){
+                    counter++;
+                    images[index].request = {
+                        status: request.status, 
+                        response: request.response
+                    };
+                    if(counter === images.length){
+                        done();
+                    }
+                }
+                request.responseType = 'blob',
+                request.open('GET', images[index].url, true);
+                request.addEventListener("load", successCallback);
+                request.send(null);  
+            })(i);
         }
-        request.responseType = 'blob',
-        request.open('GET', images[0].url, true);
-        request.addEventListener("load", successCallback);
-        request.send(null);    
+    
     });
     
 
@@ -58,6 +70,7 @@ describe('ImgDownloadCache tests', function () {
         
         //specify which blob serve for each url
         httpToBlobInterceptor.setBlobForUrl(images[0].request.response, images[0].url);
+        httpToBlobInterceptor.setBlobForUrl(images[1].request.response, images[1].url);
         
         //set httpBackend for each image
         images.forEach(function(image){            
@@ -94,7 +107,7 @@ describe('ImgDownloadCache tests', function () {
     
 
     // Test 1: Get image using imageDownloadLoader
-    it("Download image for first time using imageDownloadLoder", function(done) {
+    it("Download image 0 for first time using imageDownloadLoder", function(done) {
         //delete any imgDownloadCache
         imgDownloadCache.clearCache();
         //check that image do not exist
@@ -127,6 +140,40 @@ describe('ImgDownloadCache tests', function () {
         setInterval($rootScope.$digest, 100);
         
     });
+    
+    
+    // Test 2: Get image1 using imageDownloadLoader
+    it("Download image 1 for first time using imageDownloadLoder", function(done) {
+
+        //check that image do not exist
+        var item = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[1].url);
+        expect(item).toBeNull();
+        
+        //get image (should force image download)
+        imgDownloadCache.get(images[1].url).then(function(uri){
+            //expect to have uri to a file
+            expect(uri).toBeDefined();
+            //check that download has been registered in localstorage
+            var item = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[1].url);
+            expect(item).not.toBeNull();
+            //retrieve file from system uri, and check that size matches the downloaded image
+            downgularFileTools.getFileFromSystemGivenURI(uri, 
+                function(file){
+                    expect(file.size).toEqual(images[1].request.response.size);
+                    done();
+                }, 
+                function(error){
+                    fail("failed retrieving file from system uri " + error);
+                }
+            );
+        });
+         
+        //flush http backend
+        $httpBackend.flush();
+        
+        //force promises to get executed
+        setInterval($rootScope.$digest, 100);   
+    });    
     
     
     // Test 2: Get image using imageDownloadLoader
@@ -162,19 +209,35 @@ describe('ImgDownloadCache tests', function () {
     });
     
     
-    // Test3: Clear imgDownloadCache
-    it("clear cache", function() {
+    // Test3: Check and clear imgDownloadCache
+    it("check cache and clear it", function(done) {
+        //check that both downloads are already registered in localstorage
+        var item0 = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[0].url);
+        expect(item0).not.toBeNull();
+        var item1 = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[1].url);
+        expect(item1).not.toBeNull();        
+        //check also that currentKeys object is in local storage
+        var keys = localStorage.getItem("ls." +  imgDownloadStorage.prefix + imgDownloadStorage.keys);
+        expect(keys).not.toBeNull();        
+        
+        //keys should have both keys
+        keys = angular.fromJson(keys);
+        expect(Object.keys(keys).length).toEqual(2);
+        expect(keys[images[0].url]).not.toBeNull();
+        expect(keys[images[1].url]).not.toBeNull();
+        
 
         //use clear cache method
-        imgDownloadCache.clearCache();
-        
-        //make sure that cache has been cleared
-        var item = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[0].url);
-        expect(item).toBeNull();        
-        
+        imgDownloadCache.clearCache().then(
+            function(){
+                //make sure that cache has been cleared
+                var item = localStorage.getItem("ls." + imgDownloadStorage.prefix + images[0].url);
+                expect(item).toBeNull();       
+                done();
+            });
+    
         //force promises to get executed
-        //setInterval($rootScope.$digest, 100);
-        
+        setInterval($rootScope.$digest, 100);    
     });     
              
 
