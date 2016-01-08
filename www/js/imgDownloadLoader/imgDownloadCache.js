@@ -14,16 +14,19 @@ angular.module('imgDownloadLoaderModule')
 })
 
 
-.constant('imgDownloadStorage', {
-    prefix:'imgDownload',
-    keys: 'keys'
+.constant('imgDownloadConstants', {
+    storagePrefix:'imgDownload',
+    storageKeys: 'keys',
+    serviceReady: 'imgDownloadCache - ServiceReady'
 })
 
 
-.factory('imgDownloadCache', ['$q', '$window', '$rootScope', 'imgLoaderConfig', 'downgularFileTools', 'localStorageService', 'downgularQueue', 'imgDownloadStorage', function($q, $window, $rootScope, imgLoaderConfig, downgularFileTools, localStorageService, downgularQueue, imgDownloadStorage){
+.factory('imgDownloadCache', ['$q', '$window', '$rootScope', '$timeout', 'imgLoaderConfig', 'downgularFileTools', 'localStorageService', 'downgularQueue', 'imgDownloadConstants', function($q, $window, $rootScope, $timeout, imgLoaderConfig, downgularFileTools, localStorageService, downgularQueue, imgDownloadConstants){
     
-    var Service = {};
+    var Service = {};    
     
+    //array with handlers to cancel subscriptions to serviceReady event
+    var serviceReadyListeners = [];
     
     //private pub-sub methods, to notify downloads
     var onURLdownload = function(url, callback) {
@@ -39,20 +42,20 @@ angular.module('imgDownloadLoaderModule')
     //private method to store a url in localstorage
     var saveToLocalStorage = function(url, fileUrl){
         //save relation url - fileUrl
-        localStorageService.set(imgDownloadStorage.prefix + url, fileUrl);
+        localStorageService.set(imgDownloadConstants.storagePrefix + url, fileUrl);
         //save url in currentKeys item, to be able to retrieve it for cache clearance
-        var currentKeys = localStorageService.get(imgDownloadStorage.prefix + imgDownloadStorage.keys);
+        var currentKeys = localStorageService.get(imgDownloadConstants.storagePrefix + imgDownloadConstants.storageKeys);
         if(currentKeys === null){
             currentKeys = {};
         }
         currentKeys[url] = {timestamp: Date.now()};
-        localStorageService.set(imgDownloadStorage.prefix + imgDownloadStorage.keys, currentKeys);
+        localStorageService.set(imgDownloadConstants.storagePrefix + imgDownloadConstants.storageKeys, currentKeys);
     }
     
     
     //private method to get fileUri from url in local storage
     var getFromLocalStorage = function(url){
-        return localStorageService.get(imgDownloadStorage.prefix + url);
+        return localStorageService.get(imgDownloadConstants.storagePrefix + url);
     }
     
     
@@ -61,12 +64,12 @@ angular.module('imgDownloadLoaderModule')
         var deferred = $q.defer();
         //internal method to remove url from localstorage
         var removeFromLocalStorage = function(){
-            localStorageService.remove(imgDownloadStorage.prefix + url);
+            localStorageService.remove(imgDownloadConstants.storagePrefix + url);
             if(updateCurrentKeys){
-                var currentKeys = localStorageService.get(imgDownloadStorage.prefix + imgDownloadStorage.keys);
+                var currentKeys = localStorageService.get(imgDownloadConstants.storagePrefix + imgDownloadConstants.storageKeys);
                 if(currentKeys != null){
                     delete currentKeys[url];
-                    localStorageService.set(imgDownloadStorage.prefix + imgDownloadStorage.keys, currentKeys);
+                    localStorageService.set(imgDownloadConstants.storagePrefix + imgDownloadConstants.storageKeys, currentKeys);
                 }
             }
         };
@@ -193,7 +196,7 @@ angular.module('imgDownloadLoaderModule')
             }
         };
         //bucle over currentKeys in order to delete its files
-        var currentKeys = localStorageService.get(imgDownloadStorage.prefix + imgDownloadStorage.keys);
+        var currentKeys = localStorageService.get(imgDownloadConstants.storagePrefix + imgDownloadConstants.storageKeys);
         if(currentKeys != null){
             remainingKeys = Object.keys(currentKeys).length;
             for(var key in currentKeys){
@@ -208,7 +211,7 @@ angular.module('imgDownloadLoaderModule')
             }
         }
         //delete currentKeys from localstorage
-        localStorageService.remove(imgDownloadStorage.prefix + imgDownloadStorage.keys);
+        localStorageService.remove(imgDownloadConstants.storagePrefix + imgDownloadConstants.storageKeys);
         
         return deferred.promise;
     }
@@ -228,27 +231,83 @@ angular.module('imgDownloadLoaderModule')
     
     //public method to clear old cache
     Service.clearOldCache = function(){
-        //perform cache clearance if need
+        var deferred = $q.defer();
         var time = Date.now();
-        //bucle over currentKeys in order to delete the ones that have expired
-        var currentKeys = localStorageService.get(imgDownloadStorage.prefix + imgDownloadStorage.keys);
+        
+        //bucle over currentKeys in order to collect the ones that have expired
+        var currentKeys = localStorageService.get(imgDownloadConstants.storagePrefix + imgDownloadConstants.storageKeys);
+        var keysToRemove = [];
         if(currentKeys != null){
             for(var key in currentKeys){
                 if(currentKeys.hasOwnProperty(key)){
                     var timestamp = currentKeys[key].timestamp;
                     if(time-timestamp > imgLoaderConfig.periodToKeepAliveInMs){
-                        removeWithFileFromLocalStorage(key, true);
+                        keysToRemove.push(key);
                     }
                 }
             }
         }
+        
+        //if there are no keys expired, resolve
+        if(keysToRemove.length === 0){
+            deferred.resolve();
+        }
+        
+        //otherwhise, remove the expired keys and their files
+        else{
+            var removedKeys = 0;
+            var errorDetected = false;
+            //internal method to resolve promise after last file is removed
+            var resolveWhenFinished = function(success){
+                removedKeys++;
+                if(!success)
+                    errorDetected = true;
+                if(removedKeys == keysToRemove.length){
+                    if(errorDetected)
+                        deferred.reject();
+                    else
+                        deferred.resolve();
+                }
+            }
+            //perform bucle to remove keys and files
+            for(var i=0; i<keysToRemove.length; i++){
+                removeWithFileFromLocalStorage(keysToRemove[i], true).then(
+                    function(){resolveWhenFinished(true);},
+                    function(){resolveWhenFinished(false);}
+                );
+            }
+        }
+        
+        return deferred.promise;
+    };
+    
+    
+    //public method to subscribe to service ready event
+    Service.onReady = function(callback){   
+        var handler = $rootScope.$on(
+            imgDownloadConstants.serviceReady, 
+            function(){
+                if(callback){
+                    callback();
+                }
+                //once the event has been called, cancel the event subscription
+                handler();
+            }
+        );
     };
 
     
-    //TODO: improve clearOldCache to return a promise, and emit a signal when it's cleared
-    //perform cache clearance if need
+    //perform cache clearance if need, and emit service ready event
     if(imgLoaderConfig.clearOldCacheOnLoad === true){
-        Service.clearOldCache();
+        Service.clearOldCache()
+        .then(
+            function(){$rootScope.$emit(imgDownloadConstants.serviceReady);},
+            function(){$rootScope.$emit(imgDownloadConstants.serviceReady);}
+        );
+    }
+    //otherwhise, emit async the service ready event
+    else{
+        $timeout($rootScope.$emit(imgDownloadConstants.serviceReady));
     }
      
     
